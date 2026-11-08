@@ -1,4 +1,4 @@
-import { detectOllama } from '@/lib/aiSettings';
+import { OLLAMA_ORIGIN, detectOllama } from '@/lib/aiSettings';
 
 export const AI_TIMEOUT = 25000;
 
@@ -202,4 +202,95 @@ export async function probeAi(config) {
     const aborted = error?.name === 'AbortError';
     return { ok: false, message: aborted ? 'Timed out' : error?.message || 'Network error' };
   }
+}
+
+/**
+ * Plain-text, multi-turn reply used by the per-link chat panel.
+ * Shares the provider wiring with requestAi but never asks for JSON.
+ */
+export async function chatAi(config, { system, messages = [], maxTokens = 480, timeout = AI_TIMEOUT } = {}) {
+  const { provider, key } = config;
+  const history = messages
+    .filter((message) => message && message.content)
+    .map((message) => ({
+      role: message.role === 'assistant' ? 'assistant' : 'user',
+      content: String(message.content),
+    }));
+  if (!history.length) throw new Error('empty conversation');
+  const headers = { 'Content-Type': 'application/json' };
+  const temperature = 0.3;
+  let text = '';
+
+  if (provider.kind === 'anthropic') {
+    const response = await fetchWithTimeout(provider.endpoint, {
+      timeout,
+      method: 'POST',
+      headers: {
+        ...headers,
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({ model: provider.model, max_tokens: maxTokens, temperature, system, messages: history }),
+    });
+    if (!response.ok) throw providerError(response.status);
+    const payload = await response.json();
+    text = (payload.content || []).map((part) => part.text || '').join('');
+  } else if (provider.kind === 'gemini') {
+    const response = await fetchWithTimeout(
+      `${provider.endpoint}/${provider.model}:generateContent?key=${encodeURIComponent(key)}`,
+      {
+        timeout,
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: history.map((message) => ({
+            role: message.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: message.content }],
+          })),
+          generationConfig: { temperature, maxOutputTokens: maxTokens },
+        }),
+      }
+    );
+    if (!response.ok) throw providerError(response.status);
+    const payload = await response.json();
+    text = payload?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
+  } else if (provider.kind === 'ollama') {
+    const local = await localModel(provider);
+    if (!local.running) throw new Error('ollama offline');
+    const response = await fetchWithTimeout(`${OLLAMA_ORIGIN}/api/chat`, {
+      timeout,
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: local.model,
+        messages: [{ role: 'system', content: system }, ...history],
+        stream: false,
+        options: { temperature },
+      }),
+    });
+    if (!response.ok) throw providerError(response.status);
+    const payload = await response.json();
+    text = payload?.message?.content || '';
+  } else {
+    const response = await fetchWithTimeout(provider.endpoint, {
+      timeout,
+      method: 'POST',
+      headers: { ...headers, Authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model: provider.model,
+        temperature,
+        max_tokens: maxTokens,
+        messages: [{ role: 'system', content: system }, ...history],
+      }),
+    });
+    if (!response.ok) throw providerError(response.status);
+    const payload = await response.json();
+    text = payload?.choices?.[0]?.message?.content || '';
+  }
+
+  const reply = String(text || '').trim();
+  if (!reply) throw new Error('empty reply');
+  return reply.slice(0, 2000);
 }
