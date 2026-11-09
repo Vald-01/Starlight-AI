@@ -1,5 +1,5 @@
-import { canUseAi, readAiConfig } from '@/lib/aiSettings';
-import { chatAi } from '@/lib/aiClient';
+import { readAiConfig } from '@/lib/aiSettings';
+import { askLinkQuestion } from '@/lib/aiChat';
 
 /**
  * Per-link chat sessions.
@@ -91,28 +91,14 @@ async function ensureContext(key, item) {
   return readme;
 }
 
-function systemPrompt(item, language, readme) {
-  return [
-    `You answer questions about a single saved resource: "${item.title}" (${item.url}).`,
-    `Saved metadata: source ${item.source}, category ${item.category}, tags ${(item.tags || []).join(', ') || 'none'}.`,
-    item.summary ? `Saved summary: ${item.summary}` : '',
-    readme
-      ? `Repository README excerpt (may be truncated):\n${readme}`
-      : 'No source content was available: rely on the metadata above and say plainly when a detail is missing.',
-    'Stay strictly on this resource: if a question is about anything else, decline in one short sentence.',
-    'Never invent commands, files, versions or figures that are not in the context.',
-    `Answer in ${language === 'fr' ? 'French' : 'English'}, plainly, in at most four short sentences or a compact list.`,
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
-
 function errorCode(error, providerKind) {
-  if (error?.code === 'no-ai') return 'no-ai';
   if (error?.status === 401 || error?.status === 403) return 'invalid-key';
   // Gemini answers 400 (API_KEY_INVALID) for a revoked or malformed key.
   if (providerKind === 'gemini' && error?.status === 400) return 'invalid-key';
+  if (error?.status === 404) return 'model';
   if (error?.name === 'AbortError') return 'timeout';
+  // fetch rejects with a TypeError when the host is unreachable or blocked by CORS.
+  if (error instanceof TypeError || error?.message === 'ollama offline') return 'network';
   return 'generic';
 }
 
@@ -131,19 +117,9 @@ export async function askRepo(item, question, { language = 'en' } = {}) {
     draft: '',
   });
 
-  const config = readAiConfig();
-
   try {
-    if (!canUseAi(config)) {
-      const error = new Error('no-ai');
-      error.code = 'no-ai';
-      throw error;
-    }
-    const readme = await ensureContext(key, item);
-    const reply = await chatAi(config, {
-      system: systemPrompt(item, language, readme),
-      messages: asked.messages,
-    });
+    const context = await ensureContext(key, item);
+    const reply = await askLinkQuestion(item, text, { language, history: current.messages, context });
     const latest = sessions.get(key) || asked;
     update(key, {
       messages: [...latest.messages, { role: 'assistant', content: reply }],
@@ -151,6 +127,8 @@ export async function askRepo(item, question, { language = 'en' } = {}) {
       error: '',
     });
   } catch (error) {
-    update(key, { pending: false, error: errorCode(error, config.provider?.kind) });
+    const { provider } = readAiConfig();
+    console.error(`[Link chat] ${provider?.label} (${provider?.model}) failed:`, error);
+    update(key, { pending: false, error: errorCode(error, provider?.kind) });
   }
 }

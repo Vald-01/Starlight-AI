@@ -3,7 +3,7 @@ import { readPref, writePref } from '@/lib/prefs';
 
 export const AI_KEY_STORAGE = 'linkvault_api_key';
 const AI_KEYS_STORAGE = 'linkvault_api_keys';
-export const DEFAULT_PROVIDER = 'copilot';
+export const DEFAULT_PROVIDER = 'openai';
 export const OLLAMA_ORIGIN = 'http://localhost:11434';
 
 export const AI_PROVIDERS = {
@@ -22,8 +22,8 @@ export const AI_PROVIDERS = {
     id: 'anthropic',
     label: 'Anthropic',
     kind: 'anthropic',
-    model: 'claude-3-5-sonnet-latest',
-    modelLabel: 'Claude 3.5 Sonnet',
+    model: 'claude-haiku-5-5',
+    modelLabel: 'Claude Haiku 5.5',
     endpoint: 'https://api.anthropic.com/v1/messages',
     keyPlaceholder: 'sk-ant-...',
     consoleUrl: 'https://console.anthropic.com/settings/keys',
@@ -33,22 +33,12 @@ export const AI_PROVIDERS = {
     id: 'gemini',
     label: 'Google',
     kind: 'gemini',
-    model: 'gemini-1.5-flash',
-    modelLabel: 'Gemini 1.5 Flash',
+    // The alias follows Google's model retirements, which a pinned id in a desktop build cannot.
+    model: 'gemini-flash-latest',
+    modelLabel: 'Gemini Flash',
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
     keyPlaceholder: 'AIza...',
     consoleUrl: 'https://aistudio.google.com/app/apikey',
-    requiresKey: true,
-  },
-  copilot: {
-    id: 'copilot',
-    label: 'Copilot',
-    kind: 'openai',
-    model: 'gpt-4o-mini',
-    modelLabel: 'GitHub Models',
-    endpoint: 'https://models.inference.ai.azure.com/chat/completions',
-    keyPlaceholder: 'github_pat_...',
-    consoleUrl: 'https://github.com/settings/tokens',
     requiresKey: true,
   },
   grok: {
@@ -60,6 +50,17 @@ export const AI_PROVIDERS = {
     endpoint: 'https://api.x.ai/v1/chat/completions',
     keyPlaceholder: 'xai-...',
     consoleUrl: 'https://console.x.ai',
+    requiresKey: true,
+  },
+  groq: {
+    id: 'groq',
+    label: 'Groq',
+    kind: 'openai',
+    model: 'llama-3.3-70b-versatile',
+    modelLabel: 'Llama 3.3 70B',
+    endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+    keyPlaceholder: 'gsk_...',
+    consoleUrl: 'https://console.groq.com/keys',
     requiresKey: true,
   },
   ollama: {
@@ -75,7 +76,7 @@ export const AI_PROVIDERS = {
   },
 };
 
-export const PROVIDER_ORDER = ['ollama', 'openai', 'anthropic', 'gemini', 'copilot', 'grok'];
+export const PROVIDER_ORDER = ['ollama', 'openai', 'anthropic', 'gemini', 'grok'];
 
 const listeners = new Set();
 let snapshot = null;
@@ -111,7 +112,7 @@ function storedLegacyKey() {
 
 function readConfig() {
   const rawProvider = storedProviderId();
-  // A provider that no longer exists (e.g. the removed Groq entry) falls back to the default.
+  // A provider that no longer exists falls back to the default.
   const providerId = AI_PROVIDERS[rawProvider] ? rawProvider : DEFAULT_PROVIDER;
   const map = readKeyMap();
   const fromMap = typeof map[providerId] === 'string' ? map[providerId] : '';

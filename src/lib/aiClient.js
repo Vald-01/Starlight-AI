@@ -41,6 +41,13 @@ async function errorMessage(response) {
   return `HTTP ${response.status}`;
 }
 
+/** A provider error that also carries the provider's own explanation, for the dev console. */
+async function detailedProviderError(response) {
+  const error = providerError(response.status);
+  error.message = `API ${response.status}: ${await errorMessage(response)}`;
+  return error;
+}
+
 /** Resolves the model actually installed when a local Ollama server answers. */
 async function localModel(provider) {
   const { running, models } = await detectOllama();
@@ -51,7 +58,7 @@ async function localModel(provider) {
 
 /**
  * Sends the same prompt to whichever provider is configured and returns the parsed JSON reply.
- * Groq, OpenAI, xAI and Copilot share the OpenAI-compatible wire format.
+ * Groq, OpenAI and xAI share the OpenAI-compatible wire format.
  */
 export async function requestAi(config, { system, user, maxTokens = 512, timeout = AI_TIMEOUT } = {}) {
   const { provider, key } = config;
@@ -233,7 +240,7 @@ export async function chatAi(config, { system, messages = [], maxTokens = 480, t
       },
       body: JSON.stringify({ model: provider.model, max_tokens: maxTokens, temperature, system, messages: history }),
     });
-    if (!response.ok) throw providerError(response.status);
+    if (!response.ok) throw await detailedProviderError(response);
     const payload = await response.json();
     text = (payload.content || []).map((part) => part.text || '').join('');
   } else if (provider.kind === 'gemini') {
@@ -253,7 +260,7 @@ export async function chatAi(config, { system, messages = [], maxTokens = 480, t
         }),
       }
     );
-    if (!response.ok) throw providerError(response.status);
+    if (!response.ok) throw await detailedProviderError(response);
     const payload = await response.json();
     text = payload?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
   } else if (provider.kind === 'ollama') {
@@ -270,7 +277,7 @@ export async function chatAi(config, { system, messages = [], maxTokens = 480, t
         options: { temperature },
       }),
     });
-    if (!response.ok) throw providerError(response.status);
+    if (!response.ok) throw await detailedProviderError(response);
     const payload = await response.json();
     text = payload?.message?.content || '';
   } else {
@@ -285,7 +292,7 @@ export async function chatAi(config, { system, messages = [], maxTokens = 480, t
         messages: [{ role: 'system', content: system }, ...history],
       }),
     });
-    if (!response.ok) throw providerError(response.status);
+    if (!response.ok) throw await detailedProviderError(response);
     const payload = await response.json();
     text = payload?.choices?.[0]?.message?.content || '';
   }

@@ -18,7 +18,6 @@
   - **OpenAI**
   - **Anthropic**
   - **Google Gemini**
-  - **Microsoft Copilot**
   - **xAI**
 
 - 🍏 **Expérience macOS Native & Légère :**

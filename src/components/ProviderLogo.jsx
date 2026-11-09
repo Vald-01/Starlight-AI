@@ -12,7 +12,6 @@ const CELLS = {
   groq: [1, 0],
   anthropic: [2, 0],
   openai: [0, 1],
-  copilot: [1, 1],
   ollama: [2, 1],
 };
 

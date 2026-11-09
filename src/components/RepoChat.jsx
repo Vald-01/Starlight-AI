@@ -1,14 +1,15 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { Send, Sparkles, Trash2 } from 'lucide-react';
+import { Loader2, Send, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { askRepo, clearChat, getRepoChat, setChatDraft, subscribeRepoChat } from '@/lib/repoChat';
 import { useLanguage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 const ERROR_KEYS = {
-  'no-ai': 'repoChatErrorNoAi',
   'invalid-key': 'repoChatErrorInvalidKey',
   timeout: 'repoChatErrorTimeout',
+  network: 'repoChatErrorNetwork',
+  model: 'repoChatErrorModel',
 };
 
 /** Scoped chat about one saved link; mounted only when an AI provider is configured. */
@@ -80,7 +81,10 @@ export default function RepoChat({ item }) {
           )}
 
           {session.pending && (
-            <p className="tabular text-[10.5px] text-muted-foreground/70">{t('repoChatThinking')}</p>
+            <p role="status" className="tabular flex items-center gap-1.5 text-[10.5px] text-muted-foreground/70">
+              <Loader2 className="h-3 w-3 animate-spin" strokeWidth={2} />
+              {t('repoChatThinking')}
+            </p>
           )}
           {session.error && (
             <p className="text-[10.5px] leading-relaxed text-destructive">
