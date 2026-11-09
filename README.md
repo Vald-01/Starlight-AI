@@ -47,7 +47,13 @@
 2. Téléchargez la dernière version du fichier **`.dmg`** (Mac Apple Silicon).
 3. Ouvrez le fichier `.dmg` et glissez **Starlight** dans votre dossier **Applications**.
 
-> **Application non signée :** Starlight n'est pas signée avec un certificat Apple. Si macOS bloque la première ouverture, allez dans **Réglages Système → Confidentialité et sécurité**, puis cliquez sur **Ouvrir quand même**. macOS peut aussi demander l'accès au Trousseau après une mise à jour.
+> **Application non notariée :** Starlight n'est pas signée avec un certificat Apple. Si macOS bloque la première ouverture, allez dans **Réglages Système → Confidentialité et sécurité**, puis cliquez sur **Ouvrir quand même**. macOS peut aussi demander l'accès au Trousseau après une mise à jour.
+>
+> Si macOS indique que l'application est **endommagée**, glissez-la d'abord dans **Applications**, puis lancez cette commande dans le Terminal :
+>
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/Starlight.app
+> ```
 
 
 
