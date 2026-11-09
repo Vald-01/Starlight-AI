@@ -183,22 +183,32 @@ function AiPanel() {
     if (!AI_PROVIDERS[id].requiresKey) checkOllama();
   };
 
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault();
     const value = key.trim();
     if (selected.requiresKey && !value) {
       toast({ description: t('aiKeyRequired') });
       return;
     }
-    saveAiConfig({ provider, key: value });
-    toast({ description: t('aiKeySaved') });
+    try {
+      await saveAiConfig({ provider, key: value });
+      toast({ description: t('aiKeySaved') });
+    } catch (error) {
+      console.error('[Keychain] save failed:', error);
+      toast({ description: t('aiKeyStoreFailed') });
+    }
   };
 
-  const disconnect = () => {
-    clearAiConfig();
-    setKey('');
-    setTest({ state: 'idle' });
-    toast({ description: t('aiKeyRemoved') });
+  const disconnect = async () => {
+    try {
+      await clearAiConfig();
+      setKey('');
+      setTest({ state: 'idle' });
+      toast({ description: t('aiKeyRemoved') });
+    } catch (error) {
+      console.error('[Keychain] delete failed:', error);
+      toast({ description: t('aiKeyStoreFailed') });
+    }
   };
 
   const runTest = async () => {

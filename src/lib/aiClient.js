@@ -1,6 +1,10 @@
 import { OLLAMA_ORIGIN, detectOllama } from '@/lib/aiSettings';
 
 export const AI_TIMEOUT = 25000;
+const CHAT_TIMEOUT = 60000;
+
+// Gemini counts thought tokens against maxOutputTokens, which could leave no room for the answer.
+const GEMINI_THINKING_HEADROOM = 1500;
 
 export function parseAiJson(text) {
   const cleaned = String(text || '')
@@ -89,11 +93,11 @@ export async function requestAi(config, { system, user, maxTokens = 512, timeout
 
   if (provider.kind === 'gemini') {
     const response = await fetchWithTimeout(
-      `${provider.endpoint}/${provider.model}:generateContent?key=${encodeURIComponent(key)}`,
+      `${provider.endpoint}/${provider.model}:generateContent`,
       {
         timeout,
         method: 'POST',
-        headers: baseHeaders,
+        headers: { ...baseHeaders, 'x-goog-api-key': key },
         body: JSON.stringify({
           contents: [{ parts: [{ text: `${system}\n\n${user}` }] }],
           generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
@@ -166,8 +170,9 @@ export async function probeAi(config) {
     if (!key) return { ok: false, message: 'Missing API key' };
 
     if (provider.kind === 'gemini') {
-      const response = await fetchWithTimeout(`${provider.endpoint}?key=${encodeURIComponent(key)}`, {
+      const response = await fetchWithTimeout(provider.endpoint, {
         timeout: 12000,
+        headers: { 'x-goog-api-key': key },
       });
       if (!response.ok) return { ok: false, status: response.status, message: await errorMessage(response) };
       return { ok: true, latency: Date.now() - started };
@@ -215,7 +220,7 @@ export async function probeAi(config) {
  * Plain-text, multi-turn reply used by the per-link chat panel.
  * Shares the provider wiring with requestAi but never asks for JSON.
  */
-export async function chatAi(config, { system, messages = [], maxTokens = 480, timeout = AI_TIMEOUT } = {}) {
+export async function chatAi(config, { system, messages = [], maxTokens = 480, timeout = CHAT_TIMEOUT } = {}) {
   const { provider, key } = config;
   const history = messages
     .filter((message) => message && message.content)
@@ -245,24 +250,27 @@ export async function chatAi(config, { system, messages = [], maxTokens = 480, t
     text = (payload.content || []).map((part) => part.text || '').join('');
   } else if (provider.kind === 'gemini') {
     const response = await fetchWithTimeout(
-      `${provider.endpoint}/${provider.model}:generateContent?key=${encodeURIComponent(key)}`,
+      `${provider.endpoint}/${provider.model}:generateContent`,
       {
         timeout,
         method: 'POST',
-        headers,
+        headers: { ...headers, 'x-goog-api-key': key },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: system }] },
           contents: history.map((message) => ({
             role: message.role === 'assistant' ? 'model' : 'user',
             parts: [{ text: message.content }],
           })),
-          generationConfig: { temperature, maxOutputTokens: maxTokens },
+          generationConfig: { temperature, maxOutputTokens: maxTokens + GEMINI_THINKING_HEADROOM },
         }),
       }
     );
     if (!response.ok) throw await detailedProviderError(response);
     const payload = await response.json();
     text = payload?.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
+    if (!text.trim()) {
+      throw new Error(`empty reply (${payload?.candidates?.[0]?.finishReason || payload?.promptFeedback?.blockReason || 'unknown'})`);
+    }
   } else if (provider.kind === 'ollama') {
     const local = await localModel(provider);
     if (!local.running) throw new Error('ollama offline');

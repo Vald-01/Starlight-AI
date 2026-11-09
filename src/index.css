@@ -29,10 +29,10 @@
     --chart-4: 280 18% 60%;
     --chart-5: 145 22% 45%;
     --radius: 0.75rem;
-    --font-heading: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --font-body: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-heading: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
     --sidebar-background: 40 40% 96%;
     --sidebar-foreground: 24 10% 20%;
     --sidebar-primary: 15 64% 60%;

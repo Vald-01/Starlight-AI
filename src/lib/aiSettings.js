@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { readPref, writePref } from '@/lib/prefs';
+import { isTauri } from '@/lib/openExternal';
 
 export const AI_KEY_STORAGE = 'linkvault_api_key';
 const AI_KEYS_STORAGE = 'linkvault_api_keys';
@@ -33,9 +35,8 @@ export const AI_PROVIDERS = {
     id: 'gemini',
     label: 'Google',
     kind: 'gemini',
-    // The alias follows Google's model retirements, which a pinned id in a desktop build cannot.
-    model: 'gemini-flash-latest',
-    modelLabel: 'Gemini Flash',
+    model: 'gemini-3.5-flash-lite',
+    modelLabel: 'Gemini 3.5 Flash-Lite',
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
     keyPlaceholder: 'AIza...',
     consoleUrl: 'https://aistudio.google.com/app/apikey',
@@ -81,7 +82,28 @@ export const PROVIDER_ORDER = ['ollama', 'openai', 'anthropic', 'gemini', 'grok'
 const listeners = new Set();
 let snapshot = null;
 
+// In the desktop app, keys live in the OS keychain; this is their in-memory copy.
+let keychainKeys = {};
+let keychainLoad = null;
+
+/** Loads the keychain into memory. Retries on the next call if the read failed. */
+export function loadStoredApiKeys() {
+  if (!isTauri()) return Promise.resolve();
+  keychainLoad ??= invoke('read_api_keys')
+    .then((raw) => {
+      const parsed = raw ? JSON.parse(raw) : {};
+      keychainKeys = parsed && typeof parsed === 'object' ? parsed : {};
+      emit();
+    })
+    .catch((error) => {
+      keychainLoad = null;
+      throw error;
+    });
+  return keychainLoad;
+}
+
 function readKeyMap() {
+  if (isTauri()) return keychainKeys;
   try {
     const parsed = JSON.parse(window.localStorage.getItem(AI_KEYS_STORAGE) || '{}');
     return parsed && typeof parsed === 'object' ? parsed : {};
@@ -90,7 +112,13 @@ function readKeyMap() {
   }
 }
 
-function writeKeyMap(map) {
+async function writeKeyMap(map) {
+  if (isTauri()) {
+    if (Object.keys(map).length) await invoke('write_api_keys', { value: JSON.stringify(map) });
+    else await invoke('delete_api_keys');
+    keychainKeys = map;
+    return;
+  }
   try {
     window.localStorage.setItem(AI_KEYS_STORAGE, JSON.stringify(map));
   } catch {
@@ -103,6 +131,7 @@ function storedProviderId() {
 }
 
 function storedLegacyKey() {
+  if (isTauri()) return '';
   try {
     return (window.localStorage.getItem(AI_KEY_STORAGE) || '').trim();
   } catch {
@@ -161,33 +190,41 @@ export function maskApiKey(key) {
   return `${value.slice(0, Math.min(6, value.length - 4))}\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022${value.slice(-4)}`;
 }
 
-export function saveAiConfig({ provider, key }) {
+/** Rejects if the keychain refuses the write, so the UI never reports a key it did not store. */
+export async function saveAiConfig({ provider, key }) {
   const providerId = AI_PROVIDERS[provider] ? provider : DEFAULT_PROVIDER;
   const value = String(key || '').trim();
-  const map = readKeyMap();
+  // Writing before the keychain is loaded would overwrite the other providers' keys.
+  await loadStoredApiKeys();
+  const map = { ...readKeyMap() };
   if (value) map[providerId] = value;
   else delete map[providerId];
-  try {
-    writeKeyMap(map);
-    writePref('provider', providerId);
-    // keep the legacy single-key entry in sync with the active provider
-    if (value) window.localStorage.setItem(AI_KEY_STORAGE, value);
-    else window.localStorage.removeItem(AI_KEY_STORAGE);
-  } catch {
-    /* storage is optional */
+  await writeKeyMap(map);
+  writePref('provider', providerId);
+  if (!isTauri()) {
+    try {
+      // keep the legacy single-key entry in sync with the active provider
+      if (value) window.localStorage.setItem(AI_KEY_STORAGE, value);
+      else window.localStorage.removeItem(AI_KEY_STORAGE);
+    } catch {
+      /* storage is optional */
+    }
   }
   emit();
 }
 
-export function clearAiConfig() {
+export async function clearAiConfig() {
+  await loadStoredApiKeys();
   const { provider } = getSnapshot();
-  const map = readKeyMap();
+  const map = { ...readKeyMap() };
   delete map[provider.id];
-  try {
-    writeKeyMap(map);
-    window.localStorage.removeItem(AI_KEY_STORAGE);
-  } catch {
-    /* storage is optional */
+  await writeKeyMap(map);
+  if (!isTauri()) {
+    try {
+      window.localStorage.removeItem(AI_KEY_STORAGE);
+    } catch {
+      /* storage is optional */
+    }
   }
   emit();
 }

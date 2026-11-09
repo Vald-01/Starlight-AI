@@ -94,8 +94,10 @@ async function ensureContext(key, item) {
 function errorCode(error, providerKind) {
   if (error?.status === 401 || error?.status === 403) return 'invalid-key';
   // Gemini answers 400 (API_KEY_INVALID) for a revoked or malformed key.
-  if (providerKind === 'gemini' && error?.status === 400) return 'invalid-key';
+  if (providerKind === 'gemini' && error?.status === 400 && /api.key/i.test(error.message)) return 'invalid-key';
   if (error?.status === 404) return 'model';
+  if (error?.status === 429) return 'quota';
+  if (error?.status === 503) return 'overloaded';
   if (error?.name === 'AbortError') return 'timeout';
   // fetch rejects with a TypeError when the host is unreachable or blocked by CORS.
   if (error instanceof TypeError || error?.message === 'ollama offline') return 'network';
@@ -114,6 +116,7 @@ export async function askRepo(item, question, { language = 'en' } = {}) {
     messages: [...current.messages, { role: 'user', content: text }],
     pending: true,
     error: '',
+    errorDetail: '',
     draft: '',
   });
 
@@ -129,6 +132,11 @@ export async function askRepo(item, question, { language = 'en' } = {}) {
   } catch (error) {
     const { provider } = readAiConfig();
     console.error(`[Link chat] ${provider?.label} (${provider?.model}) failed:`, error);
-    update(key, { pending: false, error: errorCode(error, provider?.kind) });
+    const code = errorCode(error, provider?.kind);
+    // Release builds have no dev console, so the provider's own explanation is shown in the panel.
+    const apiKey = readAiConfig().key;
+    const message = String(error?.message || '');
+    const errorDetail = code === 'timeout' ? '' : apiKey ? message.split(apiKey).join('•••') : message;
+    update(key, { pending: false, error: code, errorDetail });
   }
 }

@@ -10,6 +10,8 @@ const ERROR_KEYS = {
   timeout: 'repoChatErrorTimeout',
   network: 'repoChatErrorNetwork',
   model: 'repoChatErrorModel',
+  quota: 'repoChatErrorQuota',
+  overloaded: 'repoChatErrorOverloaded',
 };
 
 /** Scoped chat about one saved link; mounted only when an AI provider is configured. */
@@ -89,6 +91,11 @@ export default function RepoChat({ item }) {
           {session.error && (
             <p className="text-[10.5px] leading-relaxed text-destructive">
               {t(ERROR_KEYS[session.error] || 'repoChatErrorGeneral')}
+              {session.errorDetail && (
+                <span className="mt-0.5 block break-words select-text text-[10px] text-muted-foreground/80">
+                  {session.errorDetail}
+                </span>
+              )}
             </p>
           )}
         </div>
