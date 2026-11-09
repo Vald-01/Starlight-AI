@@ -2,7 +2,7 @@
 
 > **Transformez vos liens en connaissances structurées, synthétisées et toujours organisées.**
 
-**Starlight** est une application macOS native, ultra-rapide et respectueuse de votre vie privée. Elle vous permet de capturer, résumer et classer en un instant vos dépôts GitHub, articles web, snippets de code et contenus sociaux (Instagram Reels, etc.).
+**Starlight** est une application de bureau pour macOS et Windows 11, ultra-rapide et respectueuse de votre vie privée. Elle vous permet de capturer, résumer et classer en un instant vos dépôts GitHub, articles web, snippets de code et contenus sociaux (Instagram Reels, etc.).
 
 
 
@@ -20,11 +20,11 @@
   - **Google Gemini**
   - **xAI**
 
-- 🍏 **Expérience macOS Native & Légère :**
+- 🖥️ **Expérience Native & Légère :**
   - Développée avec **Tauri v2**, **React** et **Tailwind CSS** pour une empreinte mémoire minimale et une réactivité instantanée.
-  - Raccourcis natifs : `Cmd + ,` pour les Paramètres, `Cmd + N` pour la barre de saisie, `Échap` pour fermer les fenêtres.
-  - Prise en charge du thème macOS (Clair / Sombre / Automatique).
-  - Option de lancement automatique au démarrage du Mac.
+  - Raccourcis clavier : `Cmd/Ctrl + ,` pour les Paramètres, `Cmd/Ctrl + N` pour la barre de saisie, `Échap` pour fermer les fenêtres.
+  - Prise en charge du thème système (Clair / Sombre / Automatique).
+  - Option de lancement automatique à l'ouverture de session.
 
 - 🛡️ **Gestion des Doublons :** Détection intelligente des URLs déjà enregistrées avec dialogue de confirmation.
 
@@ -33,7 +33,7 @@
 
 ## 🔒 Confidentialité & Sécurité
 
-- Vos **clés API** sont conservées dans le **Trousseau macOS** et ne sont envoyées qu'à l'API officielle du fournisseur sélectionné.
+- Vos **clés API** sont conservées dans le **Trousseau macOS** ou le **Gestionnaire d'identifiants Windows** et ne sont envoyées qu'à l'API officielle du fournisseur sélectionné.
 - Vos **liens et préférences** restent sur votre machine. Aucun compte, aucune télémétrie.
 - Pour récupérer les métadonnées, l'application contacte directement la page enregistrée ou l'API GitHub.
 - En mode IA, le titre, l'URL, le résumé et vos questions sont envoyés au fournisseur que vous avez choisi. Avec **Ollama**, tout reste sur votre machine.
@@ -43,9 +43,12 @@
 
 ## 📦 Téléchargement & Installation
 
-1. Rendez-vous dans la section **[Releases](../../releases)** du dépôt.
-2. Téléchargez la dernière version du fichier **`.dmg`** (Mac Apple Silicon).
-3. Ouvrez le fichier `.dmg` et glissez **Starlight** dans votre dossier **Applications**.
+Rendez-vous dans la section **[Releases](../../releases)** du dépôt, puis suivez les étapes de votre système.
+
+### macOS (Apple Silicon)
+
+1. Téléchargez la dernière version du fichier **`.dmg`**.
+2. Ouvrez le fichier `.dmg` et glissez **Starlight** dans votre dossier **Applications**.
 
 > **Application non notariée :** Starlight n'est pas signée avec un certificat Apple. Si macOS bloque la première ouverture, allez dans **Réglages Système → Confidentialité et sécurité**, puis cliquez sur **Ouvrir quand même**. macOS peut aussi demander l'accès au Trousseau après une mise à jour.
 >
@@ -54,6 +57,11 @@
 > ```bash
 > xattr -dr com.apple.quarantine /Applications/Starlight.app
 > ```
+
+### Windows 11
+
+1. Téléchargez la dernière version du fichier **`.exe`** (`x64-setup`).
+2. Lancez l'installeur. Si Windows SmartScreen l'arrête, cliquez sur **Informations complémentaires**, puis sur **Exécuter quand même**.
 
 
 

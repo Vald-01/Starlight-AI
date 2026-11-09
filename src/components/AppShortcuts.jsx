@@ -10,7 +10,7 @@ const isEditable = (element) => {
 
 const COMPOSER_ID = 'link-input';
 
-/** Native-feeling macOS shortcuts: ⌘, settings, ⌘N and ⌘V jump to the link field. */
+/** Cmd or Ctrl shortcuts: "," opens settings, N and V jump to the link field. */
 export default function AppShortcuts() {
   const navigate = useNavigate();
   const timers = useRef([]);
@@ -47,7 +47,7 @@ export default function AppShortcuts() {
         return;
       }
 
-      // ⌘V over a non-editable surface focuses the composer; the browser then pastes into it.
+      // Paste over a non-editable surface focuses the composer; the browser then pastes into it.
       if (key === 'v' && !isEditable(document.activeElement) && !document.querySelector('[role="dialog"]')) {
         focusComposer();
       }

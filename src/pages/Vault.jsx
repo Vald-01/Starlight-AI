@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { isHttpUrl } from '@/lib/url';
 import { openExternal } from '@/lib/openExternal';
 import { useLanguage } from '@/lib/i18n';
+import { shortcutLabel } from '@/lib/platform';
 
 const matchesTab = (item, tab) => {
   if (tab === 'all') return true;
@@ -116,7 +117,7 @@ export default function Vault() {
                 className="h-9 w-full rounded-full border border-border bg-card pl-9 pr-14 text-[12.5px] text-foreground placeholder:text-muted-foreground/70 focus:border-primary/35 focus:outline-none focus:ring-2 focus:ring-primary/12"
               />
               <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-[5px] border border-border bg-background px-1 py-[1px] font-mono text-[9.5px] text-muted-foreground">
-                ⌘K
+                {shortcutLabel('K')}
               </kbd>
             </div>
 

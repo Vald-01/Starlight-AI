@@ -6,6 +6,7 @@ import logoMark from '@/assets/brand/starlight-icon.png';
 import { openSettings } from '@/lib/settingsModal';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n';
+import { shortcutLabel } from '@/lib/platform';
 
 export default function AppHeader() {
   const { t } = useLanguage();
@@ -60,7 +61,7 @@ export default function AppHeader() {
             type="button"
             onClick={() => openSettings('general')}
             aria-label={t('settings')}
-            title={`${t('settings')} (⌘,)`}
+            title={`${t('settings')} (${shortcutLabel(',')})`}
             className="grid h-8 w-8 place-items-center rounded-full border border-border/70 bg-card/70 text-muted-foreground transition hover:border-border hover:text-foreground"
           >
             <Settings className="h-3.5 w-3.5" strokeWidth={1.9} />
